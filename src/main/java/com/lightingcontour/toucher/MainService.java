@@ -352,6 +352,7 @@ public class MainService extends Service {
         if (imageButton1 != null)
         {
             windowManager.removeView(toucherLayout);
+            windowManager.removeView(inputLayout);
             windowManager.removeView(danmakuView);
         }
         super.onDestroy();
