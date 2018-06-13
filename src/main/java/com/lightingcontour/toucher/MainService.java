@@ -227,25 +227,25 @@ public class MainService extends Service {
                 params.x = (int) event.getRawX() - 75;
                 params.y = (int) event.getRawY() - 75 - statusBarHeight;
                 danmakuParams.height=(int) event.getRawY() - 75 - statusBarHeight ;
-                windowManager.updateViewLayout(danmakuLayout,danmakuParams);
-                windowManager.updateViewLayout(toucherLayout,params);
-
                 DisplayMetrics dm = getResources().getDisplayMetrics();
                 int width = dm.widthPixels;
 
+                //使用layout方法移动
+                //danmakuView.layout(10,10,width-20,params.y-150-10);
+                //textInput.layout(10,params.y-140,width-150-20, params.y-10 );
+
+                windowManager.updateViewLayout(danmakuLayout,danmakuParams);
+                windowManager.updateViewLayout(toucherLayout,params);
+
                 //使用layoutParams移动
-                //ConstraintLayout.LayoutParams danmuParams = (ConstraintLayout.LayoutParams) danmakuView.getLayoutParams();
+                //LinearLayout.LayoutParams danmuParams = (LinearLayout.LayoutParams) danmakuView.getLayoutParams();
                 //danmuParams.height=params.y;
-                //danmuParams.setMargins(0,0,0,150);
+                //danmuParams.setMargins(10,10,10,160);
                 //danmakuView.setLayoutParams(danmuParams);
 
-                //ConstraintLayout.LayoutParams inpuyParams = (ConstraintLayout.LayoutParams) textInput.getLayoutParams();
-                //inpuyParams.setMargins(0,0,0,150);
-                //textInput.setLayoutParams(inpuyParams);
-
-                //使用layout方法移动
-                danmakuView.layout(1,1,width-2,(int) event.getRawY() - statusBarHeight - 75 - 150);
-                textInput.layout(1,(int) event.getRawY() -statusBarHeight - 75 - 150 +1,width-150-2, (int) event.getRawY() - statusBarHeight - 75 -1 );
+                //LinearLayout.LayoutParams inputParams = (LinearLayout.LayoutParams) textInput.getLayoutParams();
+                //inputParams.setMargins(0,params.y-150,0,0);
+                //textInput.setLayoutParams(inputParams);
 
                 //inputParams.leftMargin=0;
                 //inputParams.topMargin=params.y;
