@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:visibility="gone"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="150dp">
+
+    <EditText
+        android:id="@+id/textInput"
+        android:textColor="#ffffff"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="4"
+        android:inputType="text"/>
+
+    <Button
+        android:id="@+id/inputButton"
+        android:layout_width="0dp"
+        android:background="@android:drawable/ic_menu_send"
+        android:layout_height="match_parent"
+        android:layout_weight="1"/>
+
+</LinearLayout>

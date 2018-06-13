@@ -10,6 +10,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.constraint.ConstraintLayout;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -17,6 +18,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -43,9 +45,12 @@ public class MainService extends Service {
     LinearLayout danmakuLayout;
     WindowManager.LayoutParams danmakuParams;
     WindowManager windowManager;
+    LinearLayout inputLayout;
+    WindowManager.LayoutParams inputParams;
 
     ImageButton imageButton1;
     EditText textInput;
+    Button inputButton;
 
     //状态栏高度.
     int statusBarHeight = -1;
@@ -73,6 +78,7 @@ public class MainService extends Service {
         super.onCreate();
         Log.i(TAG,"MainService Created");
         createDanmaku();
+        createInput();
         createToucher();
     }
 
@@ -152,6 +158,38 @@ public class MainService extends Service {
     }
 
     @SuppressLint("ClickableViewAccessibility")
+    private void createInput(){
+
+        windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
+        LayoutInflater inflater = LayoutInflater.from(getApplication());
+
+        inputParams = new WindowManager.LayoutParams();
+        inputParams.gravity = Gravity.START | Gravity.TOP;
+        inputParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        inputParams.format = PixelFormat.RGBA_8888;
+        inputParams.x = 0;
+        inputParams.y = 760;
+        inputParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+        inputParams.height = 150;
+        inputLayout = (LinearLayout) inflater.inflate(R.layout.inputlayout,null);
+        windowManager.addView(inputLayout,inputParams);
+
+        inputButton = (Button) inputLayout.findViewById(R.id.inputButton);
+        inputButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String content = textInput.getText().toString();
+                if (!TextUtils.isEmpty(content)){
+                    addDanmaku(content,true);
+                    textInput.setText("");
+                }
+            }
+        });
+
+
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     private void createToucher()
     {
 
@@ -187,7 +225,7 @@ public class MainService extends Service {
 
         //浮动窗口按钮.
         imageButton1 = (ImageButton) toucherLayout.findViewById(R.id.imageButton1);
-        textInput = (EditText) danmakuLayout.findViewById(R.id.textInput);
+        textInput = (EditText) inputLayout.findViewById(R.id.textInput);
 
         imageButton1.setOnClickListener(new View.OnClickListener() {
             long[] hints = new long[2];
@@ -199,18 +237,18 @@ public class MainService extends Service {
                 if (SystemClock.uptimeMillis() - hints[0] >= 500)
                 {
                     Log.i(TAG,"要执行");
-                    int visibility = textInput.getVisibility();
+                    int visibility = inputLayout.getVisibility();
                     if (visibility != View.VISIBLE){
-                        textInput.setVisibility(View.VISIBLE);
-                        danmakuParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
-                        //danmakuParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                        windowManager.updateViewLayout(danmakuLayout,danmakuParams);
+                        inputLayout.setVisibility(View.VISIBLE);
+                        //inputParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                        //inputParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                        //windowManager.updateViewLayout(inputLayout,inputParams);
                     }
                     else{
-                        textInput.setVisibility(View.GONE);
-                        danmakuParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
-                        //danmakuParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-                        windowManager.updateViewLayout(danmakuLayout,danmakuParams);
+                        inputLayout.setVisibility(View.GONE);
+                        //inputParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                        //inputParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                        //windowManager.updateViewLayout(inputLayout,inputParams);
                     }
                     //Toast.makeText(MainService.this,"连续点击两次以退出",Toast.LENGTH_SHORT).show();
                 }else
@@ -226,7 +264,9 @@ public class MainService extends Service {
             public boolean onTouch(View v, MotionEvent event) {
                 params.x = (int) event.getRawX() - 75;
                 params.y = (int) event.getRawY() - 75 - statusBarHeight;
-                danmakuParams.height=(int) event.getRawY() - 75 - statusBarHeight ;
+                danmakuParams.height=(int) event.getRawY() - 75 - statusBarHeight -160;
+                inputParams.x=0;
+                inputParams.y=params.y-150;
                 DisplayMetrics dm = getResources().getDisplayMetrics();
                 int width = dm.widthPixels;
 
@@ -236,6 +276,7 @@ public class MainService extends Service {
 
                 windowManager.updateViewLayout(danmakuLayout,danmakuParams);
                 windowManager.updateViewLayout(toucherLayout,params);
+                windowManager.updateViewLayout(inputLayout,inputParams);
 
                 //使用layoutParams移动
                 //LinearLayout.LayoutParams danmuParams = (LinearLayout.LayoutParams) danmakuView.getLayoutParams();
