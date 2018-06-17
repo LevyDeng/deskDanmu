@@ -1,4 +1,4 @@
-package com.lightingcontour.toucher;
+package com.sleepybear.deskdanmu;
 
 import java.io.IOException;
 

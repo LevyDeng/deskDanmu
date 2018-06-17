@@ -1,4 +1,4 @@
-package com.lightingcontour.toucher;
+package com.sleepybear.deskdanmu;
 
 import android.annotation.SuppressLint;
 import android.app.Service;
