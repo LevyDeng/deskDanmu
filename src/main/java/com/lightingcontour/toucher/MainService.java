@@ -6,12 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.constraint.ConstraintLayout;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -22,9 +20,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-import android.widget.Toast;
-
 import java.util.Random;
 
 import master.flame.danmaku.controller.DrawHandler;
@@ -157,7 +152,7 @@ public class MainService extends Service {
         danmakuView.prepare(parser, danmakuContext);
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
     private void createInput(){
 
         windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
@@ -181,6 +176,8 @@ public class MainService extends Service {
                 String content = textInput.getText().toString();
                 if (!TextUtils.isEmpty(content)){
                     addDanmaku(content,true);
+                    danmuTransfer dm = new danmuTransfer();
+                    dm.sendDanmu(content);
                     textInput.setText("");
                 }
             }
@@ -189,7 +186,7 @@ public class MainService extends Service {
 
     }
 
-    @SuppressLint("ClickableViewAccessibility")
+    @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
     private void createToucher()
     {
 
@@ -267,8 +264,8 @@ public class MainService extends Service {
                 danmakuParams.height=(int) event.getRawY() - 75 - statusBarHeight -160;
                 inputParams.x=0;
                 inputParams.y=params.y-150;
-                DisplayMetrics dm = getResources().getDisplayMetrics();
-                int width = dm.widthPixels;
+                //DisplayMetrics dm = getResources().getDisplayMetrics();
+                //int width = dm.widthPixels;
 
                 //使用layout方法移动
                 //danmakuView.layout(10,10,width-20,params.y-150-10);
@@ -353,7 +350,7 @@ public class MainService extends Service {
         {
             windowManager.removeView(toucherLayout);
             windowManager.removeView(inputLayout);
-            windowManager.removeView(danmakuView);
+            windowManager.removeView(danmakuLayout);
         }
         super.onDestroy();
     }

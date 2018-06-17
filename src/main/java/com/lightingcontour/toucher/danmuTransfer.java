@@ -1,54 +1,48 @@
 package com.lightingcontour.toucher;
 
-
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.io.IOException;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class danmuTransfer {
 
-    private static final String DANMUSERVER="http://danmu.ptrees.top";
+    //private static final String DANMUSERVER="http://danmu.ptrees.top";
+    private static final String DANMUSERVER="http://192.168.1.6/danmureceiver/";
 
     public String getDanmu(){
         String s="";
         return s;
     }
 
-    public void sendDanmu(String danmu){
-        try {
-            URL url = new URL(DANMUSERVER);
-            URLConnection conn = url.openConnection();
-            HttpURLConnection http = (HttpURLConnection)conn;
-            http.setConnectTimeout(5000);
-            http.setReadTimeout(15000);
-            http.setDoOutput(true);
-            http.setDoInput(true);
-            http.setRequestMethod("POST");
-            Map<String,String> data = new HashMap<>();
-            data.put("user","ptrees");
-            data.put("content",danmu);
-            StringJoiner sj = new StringJoiner("&");
-            for (Map.Entry<String,String> entry: data.entrySet()) {
-                sj.add(URLEncoder.encode(entry.getKey(), "utf8") + "=" +
-                        URLEncoder.encode(entry.getValue(), "utf8"));
+    public void sendDanmu(final String danmu){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                send(danmu);
             }
-            byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
-            int length = out.length;
+        }).start();
+    }
 
-            http.setFixedLengthStreamingMode(length);
-            http.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            http.connect();
-            try(OutputStream os = http.getOutputStream()){
-                os.write(out);
-            }
-        }catch (Exception e){
+    private void send(String danmu){
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = new FormBody.Builder()
+                .add("user","ptrees")
+                .add("content", danmu)
+                .build();
+        Request req = new Request.Builder()
+                .post(body)
+                .url(DANMUSERVER)
+                .build();
+
+        try{
+            client.newCall(req).execute();
+        }catch (IOException e){
             e.printStackTrace();
         }
+
+
     }
 }
