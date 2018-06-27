@@ -20,6 +20,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
 import java.util.Random;
 
 import master.flame.danmaku.controller.DrawHandler;
@@ -46,6 +51,7 @@ public class MainService extends Service {
     ImageButton imageButton1;
     EditText textInput;
     Button inputButton;
+    Socket inputSocket;
 
     //状态栏高度.
     int statusBarHeight = -1;
@@ -130,7 +136,8 @@ public class MainService extends Service {
             public void prepared() {
                 showDanmaku = true;
                 danmakuView.start();
-                generateSomeDanmaku();
+                //generateSomeDanmaku();
+                gettingDanmaku();
             }
 
             @Override
@@ -175,10 +182,20 @@ public class MainService extends Service {
             public void onClick(View v) {
                 String content = textInput.getText().toString();
                 if (!TextUtils.isEmpty(content)){
-                    addDanmaku(content,true);
-                    danmuTransfer dm = new danmuTransfer();
-                    dm.sendDanmu(content);
-                    textInput.setText("");
+                    if (inputSocket.isClosed()){
+                        danmuTransfer dm = new danmuTransfer();
+                        inputSocket = dm.getInput();
+                    }
+                    try {
+                        DataOutputStream out = new DataOutputStream(inputSocket.getOutputStream());
+                        try {
+                            out.writeUTF(content);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }catch (IOException e){
+                        e.printStackTrace();
+                    }
                 }
             }
         });
@@ -327,6 +344,26 @@ public class MainService extends Service {
                     try {
                         Thread.sleep(time);
                     } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private void gettingDanmaku() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                danmuTransfer dm = new danmuTransfer();
+                DataInputStream in = dm.getReader();
+                while(showDanmaku) {
+                    try{
+                        String danmu = in.readUTF();
+                        if (!danmu.equals("")){
+                            addDanmaku(danmu,false);
+                        }
+                    }catch (IOException e){
                         e.printStackTrace();
                     }
                 }
