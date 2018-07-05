@@ -13,21 +13,18 @@ import okhttp3.Response;
 
 public class danmuTransfer {
 
-    //private static final String DANMUSERVER="http://danmu.ptrees.top";
-    private static final String DANMU_SERVER="127.0.0.1";
-    private static final int SEND_PORT=9998;
-    private static final int RECV_PORT=9999;
+    //private static final String DANMU_SERVER="http://ptrees.ddns.net";
+    private static final String DANMU_SERVER="192.168.100.42";
+    private static final int SEND_PORT=999;
+    private static final int RECV_PORT=997;
 
     public String getDanmu(){
-        String s="";
-        return s;
+        return "";
     }
 
-    public DataInputStream getReader(){
+    public Socket getOutput(){
         try {
-            Socket socket = new Socket(DANMU_SERVER, RECV_PORT);
-            DataInputStream in = new DataInputStream(socket.getInputStream());
-            return in;
+            return new Socket(DANMU_SERVER, RECV_PORT);
         }catch (IOException e){
             e.printStackTrace();
             return null;
@@ -71,8 +68,7 @@ public class danmuTransfer {
      */
     public Socket getInput(){
         try {
-            Socket socket = new Socket(DANMU_SERVER, SEND_PORT);
-            return socket;
+            return new Socket(DANMU_SERVER, SEND_PORT);
         }catch (IOException e){
             e.printStackTrace();
             return null;

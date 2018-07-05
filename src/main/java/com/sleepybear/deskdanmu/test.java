@@ -1,4 +1,4 @@
-package com.sleepybear.deskdanmu;
+//package com.sleepybear.deskdanmu;
 
 import java.io.IOException;
 

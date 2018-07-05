@@ -23,8 +23,10 @@ import android.widget.LinearLayout;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Random;
 
 import master.flame.danmaku.controller.DrawHandler;
@@ -182,10 +184,12 @@ public class MainService extends Service {
             public void onClick(View v) {
                 String content = textInput.getText().toString();
                 if (!TextUtils.isEmpty(content)){
-                    if (inputSocket.isClosed()){
+                    /*if (inputSocket==null || inputSocket.isClosed()){
                         danmuTransfer dm = new danmuTransfer();
                         inputSocket = dm.getInput();
-                    }
+                    }*/
+                    danmuTransfer dm = new danmuTransfer();
+                    inputSocket = dm.getInput();
                     try {
                         DataOutputStream out = new DataOutputStream(inputSocket.getOutputStream());
                         try {
@@ -355,16 +359,50 @@ public class MainService extends Service {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                danmuTransfer dm = new danmuTransfer();
-                DataInputStream in = dm.getReader();
-                while(showDanmaku) {
-                    try{
-                        String danmu = in.readUTF();
-                        if (!danmu.equals("")){
-                            addDanmaku(danmu,false);
+                //danmuTransfer dm = new danmuTransfer();
+                Socket outputSocket = null;
+                try {
+                    outputSocket = new Socket("192.168.100.42", 997);
+                    try {
+                        outputSocket.setSoTimeout(0);
+                    }catch (SocketException e){
+                        e.printStackTrace();
+                    }
+                    try {
+                        DataInputStream in = new DataInputStream(outputSocket.getInputStream());
+                        while(showDanmaku) {
+                            try{
+                                byte[] danmu = new byte[1024];
+                                int len = in.read(danmu,0,1024);
+                                StringBuilder sb = new StringBuilder();
+                                sb.append(new String(danmu, 0, len,"UTF-8"));
+                                if (!danmu.equals("") && len != -1){
+                                    addDanmaku(sb.toString(),false);
+                                    Log.i(TAG,"Got msg:"+sb.toString());
+                                }
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }catch (IOException e){
+                                e.printStackTrace();
+                            }
                         }
+                        in.close();
                     }catch (IOException e){
                         e.printStackTrace();
+                    }
+                }catch (IOException e){
+                    e.printStackTrace();
+                }finally {
+                    if (outputSocket != null) {
+                        try {
+                            outputSocket.close();
+                        } catch (IOException e) {
+                            outputSocket = null;
+                            System.out.println("客户端 finally 异常:" + e.getMessage());
+                        }
                     }
                 }
             }
