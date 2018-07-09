@@ -13,9 +13,9 @@ import okhttp3.Response;
 
 public class danmuTransfer {
 
-    //private static final String DANMU_SERVER="http://ptrees.ddns.net";
-    private static final String DANMU_SERVER="192.168.100.42";
-    private static final int SEND_PORT=999;
+    private static final String DANMU_SERVER="ptrees.win";
+    //private static final String DANMU_SERVER="127.0.0.1";
+    private static final int SEND_PORT=998;
     private static final int RECV_PORT=997;
 
     public String getDanmu(){

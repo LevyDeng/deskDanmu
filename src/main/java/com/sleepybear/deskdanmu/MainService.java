@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Random;
@@ -182,26 +183,35 @@ public class MainService extends Service {
         inputButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String content = textInput.getText().toString();
-                if (!TextUtils.isEmpty(content)){
+                new Thread(runnable).start();
+            }
+
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    String content = textInput.getText().toString();
+                    if (!TextUtils.isEmpty(content)){
                     /*if (inputSocket==null || inputSocket.isClosed()){
                         danmuTransfer dm = new danmuTransfer();
                         inputSocket = dm.getInput();
                     }*/
-                    danmuTransfer dm = new danmuTransfer();
-                    inputSocket = dm.getInput();
-                    try {
-                        DataOutputStream out = new DataOutputStream(inputSocket.getOutputStream());
+                        Log.i(TAG,"Trying to send msg:"+content);
+                        danmuTransfer dm = new danmuTransfer();
                         try {
-                            out.writeUTF(content);
-                        } catch (IOException e) {
+                            inputSocket = dm.getInput();
+                            OutputStream out = inputSocket.getOutputStream();
+                            try {
+                                out.write(content.getBytes("UTF-8"));
+                                textInput.setText("");
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }catch (IOException e){
                             e.printStackTrace();
                         }
-                    }catch (IOException e){
-                        e.printStackTrace();
                     }
                 }
-            }
+            };
         });
 
 
@@ -362,7 +372,8 @@ public class MainService extends Service {
                 //danmuTransfer dm = new danmuTransfer();
                 Socket outputSocket = null;
                 try {
-                    outputSocket = new Socket("192.168.100.42", 997);
+                    danmuTransfer dm = new danmuTransfer();
+                    outputSocket = dm.getOutput();
                     try {
                         outputSocket.setSoTimeout(0);
                     }catch (SocketException e){
@@ -393,7 +404,7 @@ public class MainService extends Service {
                     }catch (IOException e){
                         e.printStackTrace();
                     }
-                }catch (IOException e){
+                }catch (Exception e){
                     e.printStackTrace();
                 }finally {
                     if (outputSocket != null) {
