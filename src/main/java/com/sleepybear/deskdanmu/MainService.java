@@ -344,7 +344,17 @@ public class MainService extends Service {
     private Socket getSocket(){
         try {
             socket = IO.socket("http://192.168.100.213");
-            socket.on("broadcasted message", onBroadcastedMessage);
+
+            socket.on("broadcasted danmaku", new Emitter.Listener() {
+
+                @Override
+                public void call(Object... args) {
+                    String msg = (String) args[0];
+                    Log.i(TAG,msg);
+                    addDanmaku(msg,false);
+                }
+
+            });
             return socket;
         }catch (URISyntaxException e){
             e.printStackTrace();
