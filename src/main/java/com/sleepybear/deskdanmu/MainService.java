@@ -21,15 +21,18 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.URISyntaxException;
 import java.util.Random;
 
+import io.socket.client.IO;
 import master.flame.danmaku.controller.DrawHandler;
 import master.flame.danmaku.danmaku.model.BaseDanmaku;
 import master.flame.danmaku.danmaku.model.DanmakuTimer;
@@ -38,6 +41,9 @@ import master.flame.danmaku.danmaku.model.android.DanmakuContext;
 import master.flame.danmaku.danmaku.model.android.Danmakus;
 import master.flame.danmaku.danmaku.parser.BaseDanmakuParser;
 import master.flame.danmaku.ui.widget.DanmakuView;
+
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 
 public class MainService extends Service {
 
@@ -54,7 +60,7 @@ public class MainService extends Service {
     ImageButton imageButton1;
     EditText textInput;
     Button inputButton;
-    Socket inputSocket;
+    Socket socket;
 
     //状态栏高度.
     int statusBarHeight = -1;
@@ -140,7 +146,12 @@ public class MainService extends Service {
                 showDanmaku = true;
                 danmakuView.start();
                 //generateSomeDanmaku();
-                gettingDanmaku();
+
+                socket = getSocket();
+                socket.connect();
+                socket.emit("danmaku", "哈喽");
+                Log.i(TAG,"Ws connection built.");
+
             }
 
             @Override
@@ -158,6 +169,7 @@ public class MainService extends Service {
 
             }
         });
+
         danmakuContext = DanmakuContext.create();
         danmakuView.prepare(parser, danmakuContext);
     }
@@ -183,35 +195,19 @@ public class MainService extends Service {
         inputButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new Thread(runnable).start();
-            }
-
-            Runnable runnable = new Runnable() {
-                @Override
-                public void run() {
-                    String content = textInput.getText().toString();
-                    if (!TextUtils.isEmpty(content)){
-                    /*if (inputSocket==null || inputSocket.isClosed()){
-                        danmuTransfer dm = new danmuTransfer();
-                        inputSocket = dm.getInput();
-                    }*/
-                        Log.i(TAG,"Trying to send msg:"+content);
-                        danmuTransfer dm = new danmuTransfer();
-                        try {
-                            inputSocket = dm.getInput();
-                            OutputStream out = inputSocket.getOutputStream();
-                            try {
-                                out.write(content.getBytes("UTF-8"));
-                                textInput.setText("");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }catch (IOException e){
-                            e.printStackTrace();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        String msg = textInput.getText().toString();
+                        textInput.setText("");
+                        if (!TextUtils.isEmpty(msg)){
+                            socket.emit("danmaku",msg);
+                            Log.i(TAG,"Sent msg: "+msg);
                         }
                     }
-                }
-            };
+                }).start();
+            }
+
         });
 
 
@@ -331,7 +327,7 @@ public class MainService extends Service {
      * @param  withBorder
      *          弹幕是否有边框
      */
-    private void addDanmaku(String content, boolean withBorder) {
+    public void addDanmaku(String content, boolean withBorder) {
         BaseDanmaku danmaku = danmakuContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_SCROLL_RL);
         danmaku.text = content;
         danmaku.padding = 5;
@@ -343,6 +339,45 @@ public class MainService extends Service {
         }
         danmakuView.addDanmaku(danmaku);
     }
+
+
+    private Socket getSocket(){
+        try {
+            socket = IO.socket("http://192.168.100.213");
+            socket.on("broadcasted message", onBroadcastedMessage);
+            return socket;
+        }catch (URISyntaxException e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private Emitter.Listener onBroadcastedMessage = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String message = data.toString();
+                /*
+                String username;
+                String message;
+                try {
+                    username = data.getString("username");
+                    message = data.getString("message");
+                } catch (JSONException e) {
+                    return;
+                }
+                */
+
+                    // add the message to view
+                    addDanmaku(message,false);
+                    Log.i(TAG,"Got msg: "+message);
+                }
+            });
+        }
+    };
 
     /**
      * 随机生成一些弹幕内容以供测试
@@ -359,61 +394,6 @@ public class MainService extends Service {
                         Thread.sleep(time);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
-    }
-
-    private void gettingDanmaku() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //danmuTransfer dm = new danmuTransfer();
-                Socket outputSocket = null;
-                try {
-                    danmuTransfer dm = new danmuTransfer();
-                    outputSocket = dm.getOutput();
-                    try {
-                        outputSocket.setSoTimeout(0);
-                    }catch (SocketException e){
-                        e.printStackTrace();
-                    }
-                    try {
-                        DataInputStream in = new DataInputStream(outputSocket.getInputStream());
-                        while(showDanmaku) {
-                            try{
-                                byte[] danmu = new byte[1024];
-                                int len = in.read(danmu,0,1024);
-                                StringBuilder sb = new StringBuilder();
-                                sb.append(new String(danmu, 0, len,"UTF-8"));
-                                if (!danmu.equals("") && len != -1){
-                                    addDanmaku(sb.toString(),false);
-                                    Log.i(TAG,"Got msg:"+sb.toString());
-                                }
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                            }catch (IOException e){
-                                e.printStackTrace();
-                            }
-                        }
-                        in.close();
-                    }catch (IOException e){
-                        e.printStackTrace();
-                    }
-                }catch (Exception e){
-                    e.printStackTrace();
-                }finally {
-                    if (outputSocket != null) {
-                        try {
-                            outputSocket.close();
-                        } catch (IOException e) {
-                            outputSocket = null;
-                            System.out.println("客户端 finally 异常:" + e.getMessage());
-                        }
                     }
                 }
             }
@@ -438,6 +418,8 @@ public class MainService extends Service {
             windowManager.removeView(inputLayout);
             windowManager.removeView(danmakuLayout);
         }
+        socket.disconnect();
+        socket.off("broadcasted danmaku");
         super.onDestroy();
     }
 
