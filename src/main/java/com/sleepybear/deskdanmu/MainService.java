@@ -9,28 +9,27 @@ import android.graphics.PixelFormat;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.constraint.ConstraintLayout;
+import android.text.Layout;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.Toast;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.util.Random;
+import java.util.zip.Inflater;
 
 import io.socket.client.IO;
 import master.flame.danmaku.controller.DrawHandler;
@@ -59,8 +58,12 @@ public class MainService extends Service {
 
     ImageButton imageButton1;
     EditText textInput;
+    long inputTimeLimit = 2000;
     Button inputButton;
+    Button menuButton;
+    PopupWindow popupWindow;
     Socket socket;
+    String danmuServer = "http://192.168.100.213:3000/cntv";
 
     //状态栏高度.
     int statusBarHeight = -1;
@@ -149,7 +152,8 @@ public class MainService extends Service {
 
                 socket = getSocket();
                 socket.connect();
-                socket.emit("danmaku", "哈喽");
+                //socket.emit("group1");
+                //socket.emit("danmaku", "哈喽");
                 Log.i(TAG,"Ws connection built.");
 
             }
@@ -178,7 +182,7 @@ public class MainService extends Service {
     private void createInput(){
 
         windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
-        LayoutInflater inflater = LayoutInflater.from(getApplication());
+        final LayoutInflater inflater = LayoutInflater.from(getApplication());
 
         inputParams = new WindowManager.LayoutParams();
         inputParams.gravity = Gravity.START | Gravity.TOP;
@@ -193,23 +197,51 @@ public class MainService extends Service {
 
         inputButton = (Button) inputLayout.findViewById(R.id.inputButton);
         inputButton.setOnClickListener(new View.OnClickListener() {
+            long hint = SystemClock.uptimeMillis() - inputTimeLimit - 3000;
             @Override
             public void onClick(View v) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        String msg = textInput.getText().toString();
-                        textInput.setText("");
-                        if (!TextUtils.isEmpty(msg)){
-                            socket.emit("danmaku",msg);
-                            Log.i(TAG,"Sent msg: "+msg);
+                if (SystemClock.uptimeMillis() - hint >= inputTimeLimit){
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            String msg = textInput.getText().toString();
+                            textInput.setText("");
+                            if (!TextUtils.isEmpty(msg)){
+                                socket.emit("danmaku",msg);
+                                addDanmaku(msg, true);
+                                Log.i(TAG,"Sent msg: "+msg);
+                                //System.arraycopy(hints,1,hints,0,hints.length -1);
+                                hint = SystemClock.uptimeMillis();
+                            }
                         }
-                    }
-                }).start();
+                    }).start();
+                }else{
+                    Integer avlTime = Math.round((inputTimeLimit + hint - SystemClock.uptimeMillis())/1000);
+                    Toast.makeText(MainService.this, "请在"+
+                            avlTime.toString()
+                    +"秒后回复", Toast.LENGTH_SHORT).show();
+                }
+
             }
 
         });
 
+        menuButton = (Button) inputLayout.findViewById(R.id.menuButton);
+        menuButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (null != popupWindow){
+                    popupWindow.dismiss();
+                } else{
+                    final LayoutInflater inflater = LayoutInflater.from(getApplication());
+                    LinearLayout popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
+                    popupWindow = new PopupWindow(popupWindowLayout, 200, WindowManager.LayoutParams.MATCH_PARENT, true);
+                    popupWindow.setAnimationStyle(R.style.AnimationFade);
+                    windowManager.addView(popupWindowLayout, inputParams);
+                    //popupWindow.showAtLocation(v, Gravity.LEFT, 0, 0);
+                }
+            }
+        });
 
     }
 
@@ -343,7 +375,7 @@ public class MainService extends Service {
 
     private Socket getSocket(){
         try {
-            socket = IO.socket("http://192.168.100.213");
+            socket = IO.socket(danmuServer);
 
             socket.on("broadcasted danmaku", new Emitter.Listener() {
 
@@ -354,6 +386,12 @@ public class MainService extends Service {
                     addDanmaku(msg,false);
                 }
 
+            }).on(Socket.EVENT_CONNECT_ERROR, new Emitter.Listener() {
+                @Override
+                public void call(Object... args) {
+                    Exception e = (Exception) args[0];
+                    Log.e(TAG, e.toString());
+                }
             });
             return socket;
         }catch (URISyntaxException e){
@@ -361,33 +399,6 @@ public class MainService extends Service {
             return null;
         }
     }
-
-    private Emitter.Listener onBroadcastedMessage = new Emitter.Listener() {
-        @Override
-        public void call(final Object... args) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    JSONObject data = (JSONObject) args[0];
-                    String message = data.toString();
-                /*
-                String username;
-                String message;
-                try {
-                    username = data.getString("username");
-                    message = data.getString("message");
-                } catch (JSONException e) {
-                    return;
-                }
-                */
-
-                    // add the message to view
-                    addDanmaku(message,false);
-                    Log.i(TAG,"Got msg: "+message);
-                }
-            });
-        }
-    };
 
     /**
      * 随机生成一些弹幕内容以供测试
@@ -418,6 +429,21 @@ public class MainService extends Service {
         return (int) (spValue * fontScale + 0.5f);
     }
 
+
+    protected void initPopupWindow() {
+        LayoutInflater inflater = LayoutInflater.from(getApplication());
+        LinearLayout popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
+        popupWindow = new PopupWindow(popupWindowLayout, 200, WindowManager.LayoutParams.MATCH_PARENT, true);
+        popupWindow.setAnimationStyle(R.style.AnimationFade);
+    }
+
+    private void getPopupWindow(){
+        if (null != popupWindow){
+            popupWindow.dismiss();
+        } else{
+          initPopupWindow();
+        }
+    }
 
     @Override
     public void onDestroy()
