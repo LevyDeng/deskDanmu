@@ -11,22 +11,9 @@
     <master.flame.danmaku.ui.widget.DanmakuView
         android:id="@+id/danmakuView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginBottom="150dp"
-        android:layout_marginLeft="0dp"
-        android:layout_marginRight="0dp"
-        android:layout_marginTop="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="fill_vertical"
         android:clickable="false"
         android:focusable="false"/>
-
-    <EditText
-        android:id="@+id/textInput"
-        android:visibility="gone"
-        android:layout_width="wrap_content"
-        android:layout_marginBottom="0dp"
-        android:layout_marginStart="0dp"
-        android:layout_height="150dp"
-        android:inputType="text"/>
-
 
 </LinearLayout>
