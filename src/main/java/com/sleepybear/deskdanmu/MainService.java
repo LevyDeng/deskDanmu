@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.IBinder;
@@ -11,6 +12,7 @@ import android.os.SystemClock;
 import android.support.constraint.ConstraintLayout;
 import android.text.Layout;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -22,14 +24,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import org.json.JSONObject;
 
 import java.net.URISyntaxException;
 import java.util.Random;
-import java.util.zip.Inflater;
 
 import io.socket.client.IO;
 import master.flame.danmaku.controller.DrawHandler;
@@ -48,27 +48,29 @@ public class MainService extends Service {
 
     private static final String TAG = "MainService";
 
+    WindowManager windowManager;
     ConstraintLayout toucherLayout;
     WindowManager.LayoutParams params;
     LinearLayout danmakuLayout;
     WindowManager.LayoutParams danmakuParams;
-    WindowManager windowManager;
     LinearLayout inputLayout;
     WindowManager.LayoutParams inputParams;
-    LinearLayout popupWindowLayout;
-    WindowManager.LayoutParams popupWindowParams;
+    LinearLayout menuLayout;
+    WindowManager.LayoutParams menuParams;
 
     ImageButton imageButton1;
     EditText textInput;
     long inputTimeLimit = 2000;
     Button inputButton;
     Button menuButton;
-    PopupWindow popupWindow;
     Socket socket;
     String danmuServer = "http://192.168.100.213:3000/cntv";
 
     //状态栏高度.
     int statusBarHeight = -1;
+
+    //getY函数的第一个参数,用于改变菜单方向
+    int getYType = 1;
 
     boolean showDanmaku;
     DanmakuView danmakuView;
@@ -233,16 +235,45 @@ public class MainService extends Service {
         menuButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int visibility = popupWindowLayout.getVisibility();
+                int visibility = menuLayout.getVisibility();
                 if (visibility != View.VISIBLE){
-                    popupWindowLayout.setVisibility(View.VISIBLE);
+                    menuLayout.setVisibility(View.VISIBLE);
                     }
                 else{
-                    popupWindowLayout.setVisibility(View.GONE);
+                    menuLayout.setVisibility(View.GONE);
                     }
             }
         });
 
+    }
+
+    @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
+    private void createMenu() {
+        menuParams = new WindowManager.LayoutParams();
+        windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
+        final LayoutInflater inflater = LayoutInflater.from(getApplication());
+        menuLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
+
+        menuParams.type = WindowManager.LayoutParams.TYPE_SYSTEM_ALERT;
+        menuParams.format = PixelFormat.RGBA_8888;
+        menuParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        menuParams.gravity = Gravity.START|Gravity.TOP;
+        menuParams.width = 150;
+        menuParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        menuParams.x = 0;
+        menuParams.y = 0;
+
+        windowManager.addView(menuLayout, menuParams);
+        menuLayout.setVisibility(View.GONE);
+        Button setChannel = (Button) menuLayout.findViewById(R.id.setChannel);
+        Button setFont = (Button) menuLayout.findViewById(R.id.setFont);
+        Button close = (Button) menuLayout.findViewById(R.id.close);
+        close.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopSelf();
+            }
+        });
     }
 
     @SuppressLint({"ClickableViewAccessibility", "InflateParams"})
@@ -294,6 +325,7 @@ public class MainService extends Service {
                 {
                     Log.i(TAG,"要执行");
                     int visibility = inputLayout.getVisibility();
+                    menuLayout.setVisibility(View.GONE);
                     if (visibility != View.VISIBLE){
                         inputLayout.setVisibility(View.VISIBLE);
                         //inputParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
@@ -310,7 +342,7 @@ public class MainService extends Service {
                 }else
                 {
                     Log.i(TAG,"即将关闭");
-                    stopSelf();
+                    //stopSelf();
                 }
             }
         });
@@ -323,6 +355,26 @@ public class MainService extends Service {
                 danmakuParams.height=(int) event.getRawY() - 75 - statusBarHeight -160;
                 inputParams.x=0;
                 inputParams.y=params.y-150;
+                menuParams.x=0;
+                menuParams.y=getY(getYType,params.y);
+
+                DisplayMetrics outMetrics = new DisplayMetrics();
+                windowManager.getDefaultDisplay().getMetrics(outMetrics);
+                int height = outMetrics.heightPixels;
+                if (menuParams.y < 0) {
+                    if (getYType == 1) {
+                        getYType = 0;
+                    } else {
+                        getYType = 1;
+                    }
+                } else if (menuParams.y > (height-statusBarHeight-450)){
+                    if (getYType == 1) {
+                        getYType = 0;
+                    } else {
+                        getYType = 1;
+                    }
+                }
+
                 //DisplayMetrics dm = getResources().getDisplayMetrics();
                 //int width = dm.widthPixels;
 
@@ -333,6 +385,7 @@ public class MainService extends Service {
                 windowManager.updateViewLayout(danmakuLayout,danmakuParams);
                 windowManager.updateViewLayout(toucherLayout,params);
                 windowManager.updateViewLayout(inputLayout,inputParams);
+                windowManager.updateViewLayout(menuLayout,menuParams);
 
                 //使用layoutParams移动
                 //LinearLayout.LayoutParams danmuParams = (LinearLayout.LayoutParams) danmakuView.getLayoutParams();
@@ -352,17 +405,6 @@ public class MainService extends Service {
         });
     }
 
-    @SuppressLint({"ClickableViewAccessibility"})
-    private void createMenu() {
-        popupWindowParams = new WindowManager.LayoutParams();
-        windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
-        popupWindowParams.gravity = Gravity.START;
-        popupWindowParams.width = 300;
-        LayoutInflater inflater = LayoutInflater.from(getApplication());
-        popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
-        windowManager.addView(popupWindowLayout, popupWindowParams);
-        popupWindowLayout.setVisibility(View.GONE);
-    }
     /**
      * 向弹幕View中添加一条弹幕
      * @param content
@@ -440,21 +482,14 @@ public class MainService extends Service {
         return (int) (spValue * fontScale + 0.5f);
     }
 
-
-    protected void initPopupWindow() {
-        LayoutInflater inflater = LayoutInflater.from(getApplication());
-        LinearLayout popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
-        popupWindow = new PopupWindow(popupWindowLayout, 200, WindowManager.LayoutParams.MATCH_PARENT, true);
-        popupWindow.setAnimationStyle(R.style.AnimationFade);
-    }
-
-    private void getPopupWindow(){
-        if (null != popupWindow){
-            popupWindow.dismiss();
-        } else{
-          initPopupWindow();
+    private int getY(int type, int Y) {
+        if (type == 1) {
+            return Y-150-450+75;
+        } else {
+            return Y;
         }
     }
+
 
     @Override
     public void onDestroy()
@@ -464,6 +499,7 @@ public class MainService extends Service {
             windowManager.removeView(toucherLayout);
             windowManager.removeView(inputLayout);
             windowManager.removeView(danmakuLayout);
+            windowManager.removeView(menuLayout);
         }
         socket.disconnect();
         socket.off("broadcasted danmaku");
