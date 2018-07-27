@@ -3,20 +3,31 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="wrap_content"
     android:layout_width="300dp"
-    android:background="@android:color/primary_text_light"
     android:orientation="vertical"
-    android:paddingTop="50dp">
+    >
+
+    <Button
+        android:id="@+id/setChannel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择频道"
+        android:layout_weight="1"
+        android:background="@drawable/ic_action_channel"/>
 
     <Button
         android:id="@+id/setFont"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="设置弹幕"/>
+        android:text="设置弹幕"
+        android:layout_weight="1"
+        android:background="@drawable/ic_action_font"/>
 
     <Button
         android:id="@+id/close"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="关闭"/>
+        android:text="关闭"
+        android:layout_weight="1"
+        android:background="@drawable/ic_action_exit"/>
 
 </LinearLayout>

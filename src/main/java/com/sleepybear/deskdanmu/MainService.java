@@ -55,6 +55,8 @@ public class MainService extends Service {
     WindowManager windowManager;
     LinearLayout inputLayout;
     WindowManager.LayoutParams inputParams;
+    LinearLayout popupWindowLayout;
+    WindowManager.LayoutParams popupWindowParams;
 
     ImageButton imageButton1;
     EditText textInput;
@@ -93,6 +95,7 @@ public class MainService extends Service {
         createDanmaku();
         createInput();
         createToucher();
+        createMenu();
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -230,16 +233,13 @@ public class MainService extends Service {
         menuButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (null != popupWindow){
-                    popupWindow.dismiss();
-                } else{
-                    final LayoutInflater inflater = LayoutInflater.from(getApplication());
-                    LinearLayout popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
-                    popupWindow = new PopupWindow(popupWindowLayout, 200, WindowManager.LayoutParams.MATCH_PARENT, true);
-                    popupWindow.setAnimationStyle(R.style.AnimationFade);
-                    windowManager.addView(popupWindowLayout, inputParams);
-                    //popupWindow.showAtLocation(v, Gravity.LEFT, 0, 0);
-                }
+                int visibility = popupWindowLayout.getVisibility();
+                if (visibility != View.VISIBLE){
+                    popupWindowLayout.setVisibility(View.VISIBLE);
+                    }
+                else{
+                    popupWindowLayout.setVisibility(View.GONE);
+                    }
             }
         });
 
@@ -352,6 +352,17 @@ public class MainService extends Service {
         });
     }
 
+    @SuppressLint({"ClickableViewAccessibility"})
+    private void createMenu() {
+        popupWindowParams = new WindowManager.LayoutParams();
+        windowManager = (WindowManager) getApplication().getSystemService(Context.WINDOW_SERVICE);
+        popupWindowParams.gravity = Gravity.START;
+        popupWindowParams.width = 300;
+        LayoutInflater inflater = LayoutInflater.from(getApplication());
+        popupWindowLayout = (LinearLayout) inflater.inflate(R.layout.menulayout, null);
+        windowManager.addView(popupWindowLayout, popupWindowParams);
+        popupWindowLayout.setVisibility(View.GONE);
+    }
     /**
      * 向弹幕View中添加一条弹幕
      * @param content
