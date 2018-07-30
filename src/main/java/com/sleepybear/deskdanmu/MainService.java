@@ -64,7 +64,8 @@ public class MainService extends Service {
     Button inputButton;
     Button menuButton;
     Socket socket;
-    String danmuServer = "http://192.168.100.213:3000/cntv";
+    String danmuServer = "http://ptrees.win:3000/cntv";
+    //String danmuServer = "http://192.168.100.213:3000/cntv";
 
     //状态栏高度.
     int statusBarHeight = -1;
